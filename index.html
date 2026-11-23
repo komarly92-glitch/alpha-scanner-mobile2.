@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<meta name="description" content="Scanner mobile de surveillance Binance USDT-M Futures.">
+<link rel="manifest" href="manifest.json">
+<title>Alpha Scanner Mobile</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--panel2:#18263a;--line:#29384d;--txt:#edf3fb;--muted:#9aabc0;--green:#35d39a;--red:#ff7185;--yellow:#f4c76b;--blue:#80b7ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:20px 16px 14px;background:linear-gradient(135deg,#14243a,#101827);border-bottom:1px solid var(--line)}
+h1{font-size:22px;margin:0 0 5px}h2{font-size:16px;margin:0 0 12px}.sub{color:var(--muted);font-size:12px}
+main{max-width:920px;margin:auto;padding:14px;display:grid;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+button,select{background:var(--panel2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:inherit}
+button.primary{background:#245a89;border-color:#397db7;font-weight:650}
+button:disabled{opacity:.55}
+.pill{font-size:11px;padding:4px 8px;border-radius:30px;background:#26364c;color:#c6d5e8}
+.status{font-size:12px;color:var(--muted);margin-top:9px;min-height:18px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.stat{background:var(--panel2);border-radius:10px;padding:10px}.stat b{display:block;font-size:17px}.stat span{font-size:11px;color:var(--muted)}
+.list{display:grid;gap:9px}
+.coin{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.coinhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.symbol{font-size:16px;font-weight:750}.price{font-size:13px;color:var(--muted);text-align:right}
+.score{font-weight:800;font-size:17px}.good{color:var(--green)}.bad{color:var(--red)}.neutral{color:var(--yellow)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0}
+.tag{font-size:11px;padding:4px 7px;border-radius:6px;background:#26364c;color:#c8d7e8}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.metric{font-size:11px;color:var(--muted)}.metric b{display:block;color:var(--txt);font-size:13px;margin-top:2px}
+.note{font-size:12px;line-height:1.5;color:var(--muted)}
+.warning{border-left:3px solid var(--yellow);padding-left:10px}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:6px 18px 24px}
+@media(min-width:700px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header>
+ <div class="row">
+  <div><h1>ALPHA SCANNER</h1><div class="sub">BINANCE USDT-M FUTURES · MOBILE EDITION</div></div>
+  <span class="pill">V1 · LECTURE SEULE</span>
+ </div>
+</header>
+<main>
+ <section class="panel wide">
+  <div class="row">
+   <div><h2>Surveillance du marché</h2><div class="sub">Univers : contrats perpétuels USDT · principales cryptos exclues</div></div>
+   <button id="scan" class="primary">Lancer le scan</button>
+  </div>
+  <div class="stats">
+   <div class="stat"><b id="count">—</b><span>Contrats retenus</span></div>
+   <div class="stat"><b id="scanned">—</b><span>Analyses terminées</span></div>
+   <div class="stat"><b id="updated">—</b><span>Dernière mise à jour</span></div>
+  </div>
+  <div id="status" class="status">Prêt. Appuie sur « Lancer le scan ».</div>
+ </section>
+ <section class="panel wide">
+  <div class="row"><h2>Top opportunités à examiner</h2><span class="pill">Classement indicatif / 90</span></div>
+  <div id="results" class="list"><div class="note">Aucun scan effectué pour le moment.</div></div>
+ </section>
+ <section class="panel">
+  <h2>Filtres V1</h2>
+  <div class="row"><label for="minvol" class="sub">Volume minimum 24 h</label><select id="minvol"><option value="5000000">5 M USDT</option><option value="10000000">10 M USDT</option><option value="20000000">20 M USDT</option></select></div>
+  <div class="row" style="margin-top:10px"><label for="maxcoins" class="sub">Nombre de contrats analysés</label><select id="maxcoins"><option>15</option><option selected>20</option><option>30</option></select></div>
+  <p class="note">Le scanner présélectionne les contrats les plus liquides, puis analyse les bougies 5 min, le volume, l'OI, le delta acheteur/vendeur estimé, le funding et le spread.</p>
+ </section>
+ <section class="panel">
+  <h2>Lecture du score</h2>
+  <p class="note">Volume relatif : 20 · Open Interest : 20 · Price Action : 20 · Delta taker : 15 · Funding : 10 · Liquidité/spread : 5. Les 10 points CoinGlass (liquidations) restent réservés et ne sont pas inclus dans cette V1.</p>
+  <p class="note warning">Un score élevé n'est pas un signal d'achat/vente. Vérifie le contexte 15 min, la structure 5 min et ton entrée avant toute décision. Aucun ordre n'est envoyé.</p>
+ </section>
+</main>
+<footer>Alpha Scanner Mobile · Données publiques Binance · Pas de conseil financier · Vérification humaine obligatoire</footer>
+<script>
+const API='https://fapi.binance.com';
+const EXCLUDED=new Set(['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT','DOGEUSDT','ADAUSDT','TRXUSDT','TONUSDT','LINKUSDT']);
+const $=id=>document.getElementById(id);
+const fmt=(n,d=2)=>Number.isFinite(n)?n.toLocaleString('fr-FR',{maximumFractionDigits:d}):'—';
+const pct=n=>Number.isFinite(n)?`${n>=0?'+':''}${fmt(n,2)}%`:'—';
+const status=t=>$('status').textContent=t;
+async function get(path){
+ const r=await fetch(API+path,{cache:'no-store'});
+ if(!r.ok) throw new Error(`Binance HTTP ${r.status}`);
+ return r.json();
+}
+function scoreRvol(v){return Math.max(0,Math.min(20,(v-0.7)/1.8*20))}
+function scoreOI(v){return Math.max(0,Math.min(20,Math.abs(v)/3*20))}
+function scorePA(v){return Math.max(0,Math.min(20,Math.abs(v)/2.5*20))}
+function scoreDelta(v){return Math.max(0,Math.min(15,Math.abs(v)/0.20*15))}
+function scoreFunding(v){return Math.max(0,10-Math.min(10,Math.abs(v)/0.05*10))}
+function scoreLiquidity(vol,spread){let a=Math.min(3,Math.log10(Math.max(vol,1)/5000000+1))*1.7;let b=Number.isFinite(spread)?Math.max(0,2*(1-spread/0.15)):0;return Math.max(0,Math.min(5,a+b))}
+async function mapLimit(items,limit,fn){
+ let i=0,out=new Array(items.length);
+ const workers=Array.from({length:Math.min(limit,items.length)},async()=>{while(true){const n=i++;if(n>=items.length)break;try{out[n]=await fn(items[n])}catch(e){out[n]={error:e.message,symbol:items[n].symbol}}}});
+ await Promise.all(workers);return out;
+}
+async function analyze(t){
+ const symbol=t.symbol;
+ const [klines,oiHist,premium,book]=await Promise.all([
+  get(`/fapi/v1/klines?symbol=${symbol}&interval=5m&limit=24`),
+  get(`/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=2`),
+  get(`/fapi/v1/premiumIndex?symbol=${symbol}`),
+  get(`/fapi/v1/ticker/bookTicker?symbol=${symbol}`)
+ ]);
+ if(!Array.isArray(klines)||klines.length<22) throw new Error('Historique insuffisant');
+ const last=klines[klines.length-1],prev=klines.slice(0,-1);
+ const qvol=prev.map(k=>Number(k[7]));
+ const avg=qvol.reduce((a,b)=>a+b,0)/qvol.length;
+ const rvol=avg>0?Number(last[7])/avg:0;
+ const price=Number(last[4]),p15=Number(klines[klines.length-4][4]);
+ const move15=(price/p15-1)*100;
+ const totalQuote=Number(last[7]),takerBuyQuote=Number(last[10]);
+ const delta=totalQuote>0?(2*takerBuyQuote-totalQuote)/totalQuote:0;
+ let oiChange=0;
+ if(Array.isArray(oiHist)&&oiHist.length>=2){
+  const old=Number(oiHist[0].sumOpenInterest),now=Number(oiHist[1].sumOpenInterest);
+  if(old>0)oiChange=(now/old-1)*100;
+ }
+ const funding=Number(premium.lastFundingRate)*100;
+ const bid=Number(book.bidPrice),ask=Number(book.askPrice);
+ const mid=(bid+ask)/2,spread=mid>0?(ask-bid)/mid*100:NaN;
+ const parts={rvol:scoreRvol(rvol),oi:scoreOI(oiChange),pa:scorePA(move15),delta:scoreDelta(delta),fund:scoreFunding(funding),liq:scoreLiquidity(Number(t.quoteVolume),spread)};
+ const total=Object.values(parts).reduce((a,b)=>a+b,0);
+ let bias='NEUTRE';
+ if(move15>0.15&&delta>0.04&&oiChange>0)bias='LONG À EXAMINER';
+ if(move15< -0.15&&delta< -0.04&&oiChange>0)bias='SHORT À EXAMINER';
+ return {symbol,price,vol:Number(t.quoteVolume),move15,rvol,oiChange,delta,funding,spread,total,bias};
+}
+function render(items){
+ const el=$('results');
+ if(!items.length){el.innerHTML='<div class="note">Aucune configuration exploitable trouvée. Essaie d’assouplir les filtres ou relance plus tard.</div>';return}
+ el.innerHTML=items.slice(0,5).map(x=>{
+  const c=x.bias.startsWith('LONG')?'good':x.bias.startsWith('SHORT')?'bad':'neutral';
+  return `<article class="coin">
+   <div class="coinhead"><div><div class="symbol">${x.symbol}</div><div class="sub">${x.bias}</div></div><div class="price"><div class="score ${c}">${fmt(x.total,1)}/90</div>${fmt(x.price,6)} USDT</div></div>
+   <div class="tags"><span class="tag">15m ${pct(x.move15)}</span><span class="tag">RVOL ${fmt(x.rvol,2)}x</span><span class="tag">OI ${pct(x.oiChange)}</span></div>
+   <div class="metrics">
+    <div class="metric">Delta taker<b>${pct(x.delta*100)}</b></div>
+    <div class="metric">Funding<b>${pct(x.funding)}</b></div>
+    <div class="metric">Spread<b>${pct(x.spread)}</b></div>
+   </div>
+   <div class="note" style="margin-top:9px">Volume 24h : ${fmt(x.vol/1e6,1)} M USDT · À confirmer sur Binance en 15m/5m.</div>
+  </article>`;
+ }).join('');
+}
+async function scan(){
+ const btn=$('scan');btn.disabled=true;$('results').innerHTML='';
+ try{
+  status('Connexion aux données publiques Binance…');
+  const [info,tickers]=await Promise.all([get('/fapi/v1/exchangeInfo'),get('/fapi/v1/ticker/24hr')]);
+  const allowed=new Set(info.symbols.filter(s=>s.contractType==='PERPETUAL'&&s.quoteAsset==='USDT'&&s.status==='TRADING').map(s=>s.symbol));
+  const minVol=Number($('minvol').value),max=Number($('maxcoins').value);
+  const candidates=tickers.filter(t=>allowed.has(t.symbol)&&!EXCLUDED.has(t.symbol)&&Number(t.quoteVolume)>=minVol&&Number(t.lastPrice)>0)
+    .sort((a,b)=>Number(b.quoteVolume)-Number(a.quoteVolume)).slice(0,max);
+  $('count').textContent=candidates.length;
+  if(!candidates.length){status('Aucun contrat ne correspond aux filtres.');render([]);return}
+  status(`Analyse de ${candidates.length} contrats… Cela peut prendre quelques secondes.`);
+  let done=0;
+  const analyzed=await mapLimit(candidates,3,async t=>{const r=await analyze(t);done++;$('scanned').textContent=done;status(`Analyse en cours : ${done}/${candidates.length}`);return r});
+  const valid=analyzed.filter(x=>x&&!x.error).sort((a,b)=>b.total-a.total);
+  render(valid);$('updated').textContent=new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  status(`${valid.length} analyses réussies sur ${candidates.length}. Données indicatives, vérification humaine obligatoire.`);
+  if(analyzed.some(x=>x&&x.error)) status(`${valid.length}/${candidates.length} analyses réussies. Certaines données OI/API ont échoué; relance si nécessaire.`);
+ }catch(e){status(`Erreur : ${e.message}. Vérifie Internet et réessaie.`);$('results').innerHTML='<div class="note warning">Le service Binance peut limiter temporairement les requêtes ou être indisponible depuis certains réseaux.</div>'}
+ finally{btn.disabled=false}
+}
+$('scan').addEventListener('click',scan);
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+</script>
+</body></html>

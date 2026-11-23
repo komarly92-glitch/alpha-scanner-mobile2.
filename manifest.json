@@ -1,0 +1,9 @@
+{
+  "name": "Alpha Scanner Mobile",
+  "short_name": "Alpha Scanner",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#101827",
+  "description": "Scanner de surveillance Binance USDT-M Futures"
+}
