@@ -2,7 +2,7 @@
 <html lang="fr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1220"><link rel="manifest" href="./manifest.json">
-<title>Alpha Scanner Mobile V2.1</title>
+<title>Alpha Scanner Mobile V2.2</title>
 <style>
 :root{color-scheme:dark;--bg:#08111f;--panel:#111d2e;--line:#263850;--txt:#eaf1fa;--muted:#93a6bd;--green:#22c783;--red:#ff6678;--yellow:#f2c35b;--blue:#67a8ff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:14px system-ui,sans-serif}
@@ -33,7 +33,7 @@ dialog::backdrop{background:#000b;backdrop-filter:blur(3px)}.modalhead{position:
 .tag{display:inline-block;padding:4px 7px;border-radius:20px;background:#263850;color:#dbe8f8;font-size:10px;margin:3px 3px 0 0}
 @media(min-width:650px){.results{grid-template-columns:1fr 1fr}.controls{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:2fr 1fr 1fr}}
 </style></head><body>
-<header><h1>⚡ ALPHA SCANNER <span style="color:#67a8ff">V2.1</span></h1><div class="muted">Binance USDT-M Futures · Multi-timeframe · Lecture seule · Fiches interactives</div></header>
+<header><h1>⚡ ALPHA SCANNER <span style="color:#67a8ff">V2.2</span></h1><div class="muted">Binance USDT-M Futures · Multi-timeframe · Lecture seule · Fiches interactives</div></header>
 <main>
 <section class="panel"><div class="controls">
 <div class="field"><label for="limit">Contrats par scan</label><select id="limit"><option>10</option><option>20</option><option selected>30</option></select></div>
@@ -57,18 +57,94 @@ function ema(a,p){let k=2/(p+1),v=a[0];for(let i=1;i<a.length;i++)v=a[i]*k+v*(1-
 function stats(raw){let a=raw.slice(0,-1).map(k=>({o:+k[1],h:+k[2],l:+k[3],c:+k[4],q:+k[7],tb:+k[10]}));if(a.length<25)throw Error('Bougies insuffisantes');
 let c=a.map(x=>x.c),z=a.length-1,last=a[z],e9=ema(c.slice(-30),9),e21=ema(c.slice(-45),21),move=(last.c/a[z-3].c-1)*100,avg=a.slice(-21,-1).reduce((s,x)=>s+x.q,0)/20,rvol=avg?last.q/avg:0,delta=last.q?(2*last.tb-last.q)/last.q*100:0,ranges=a.slice(-14).map(x=>x.h-x.l),atr=ranges.reduce((s,x)=>s+x,0)/ranges.length,trend=e9>e21?1:e9<e21?-1:0,breakout=last.c>Math.max(...a.slice(-12,-1).map(x=>x.h))?1:last.c<Math.min(...a.slice(-12,-1).map(x=>x.l))?-1:0;
 return {close:last.c,move,rvol,delta,atr,atrPct:atr/last.c*100,trend,breakout};}
+function detectAnomalies(raw5m,m5,oiChange,oiOK){
+  const candles=raw5m.slice(0,-1);
+  const current=candles[candles.length-1];
+  const previous=candles[candles.length-2];
+
+  if(!current||!previous){
+    return {flags:[],absorption:false,bodyRatio:NaN,priceChange5m:NaN};
+  }
+
+  const priceChange5m=(+current[4]/+previous[4]-1)*100;
+  const body=Math.abs(+current[4]-+current[1]);
+  const range=+current[2]-+current[3];
+  const bodyRatio=range>0?body/range:NaN;
+  const flags=[];
+
+  if(oiOK&&Math.abs(m5.move)>=0.15&&Math.abs(oiChange)>=0.2){
+    if(m5.move>0&&oiChange<0)
+      flags.push({type:'PRICE_OI',label:'Prix en hausse / OI en baisse',level:'warning'});
+    if(m5.move<0&&oiChange>0)
+      flags.push({type:'PRICE_OI',label:'Prix en baisse / OI en hausse',level:'warning'});
+  }
+
+  if(Math.abs(priceChange5m)>=0.1&&Math.abs(m5.delta)>=10){
+    if(priceChange5m>0&&m5.delta<0)
+      flags.push({type:'PRICE_DELTA',label:'Prix en hausse / delta négatif',level:'warning'});
+    if(priceChange5m<0&&m5.delta>0)
+      flags.push({type:'PRICE_DELTA',label:'Prix en baisse / delta positif',level:'warning'});
+  }
+
+  const absorption=Number.isFinite(bodyRatio)&&
+    m5.rvol>=1.5&&bodyRatio<=0.30&&Math.abs(m5.delta)>=15;
+
+  if(absorption){
+    flags.push({
+      type:'ABSORPTION',
+      label:'Absorption potentielle à examiner',
+      level:'alert'
+    });
+  }
+
+  return {flags,absorption,bodyRatio,priceChange5m};
+}
 async function analyze(symbol,volume){
 let [a,b,c,oi,book]=await Promise.all([get(`/fapi/v1/klines?symbol=${symbol}&interval=1h&limit=60`),get(`/fapi/v1/klines?symbol=${symbol}&interval=15m&limit=60`),get(`/fapi/v1/klines?symbol=${symbol}&interval=5m&limit=60`),get(`/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=4`).catch(()=>[]),get(`/fapi/v1/ticker/bookTicker?symbol=${symbol}`)]);
 let h1=stats(a),m15=stats(b),m5=stats(c),oiOK=oi.length>=2,oiChange=oiOK?(+oi[oi.length-1].sumOpenInterest/+oi[0].sumOpenInterest-1)*100:NaN,bid=+book.bidPrice,ask=+book.askPrice,mid=(bid+ask)/2,spread=mid?(ask-bid)/mid*100:NaN;
 let L=0,S=0,add=(v,w)=>{if(v>0)L+=w;else if(v<0)S+=w};
 add(h1.trend,18);add(m15.trend,18);add(m5.trend,12);add(m15.move,Math.min(12,Math.abs(m15.move)*2));add(m5.delta,Math.min(12,Math.abs(m5.delta)/5));if(oiOK&&oiChange>0){if(m5.delta>0)L+=10;if(m5.delta<0)S+=10}add(m15.breakout,10);add(m5.breakout,8);if(m5.rvol>=1.2)add(m5.delta,8);
 let score=Math.round(Math.max(L,S)),signal=L>=S?'LONG':'SHORT',why=[];if(!oiOK)why.push('OI indisponible');if(m5.rvol<.8)why.push('RVOL faible');if(!Number.isFinite(spread)||spread>.15)why.push('spread élevé');if(m15.atrPct>3.5)why.push('volatilité excessive');if(Math.abs(L-S)<15)why.push('direction non confirmée');if(score<55)why.push('score insuffisant');if(why.length)signal='NEUTRE';
+let diagnostics=detectAnomalies(c,m5,oiChange,oiOK);
 let risk=Math.max(m5.atr*1.25,m5.close*.0025),sl=signal==='LONG'?m5.close-risk:signal==='SHORT'?m5.close+risk:NaN,tp1=signal==='LONG'?m5.close+risk*1.5:signal==='SHORT'?m5.close-risk*1.5:NaN,tp2=signal==='LONG'?m5.close+risk*2.2:signal==='SHORT'?m5.close-risk*2.2:NaN;
-return {symbol,volume,h1,m15,m5,oiChange,oiOK,spread,score,signal,sl,tp1,tp2,risk,why:why.join(' · ')||'Confluence détectée : attendre une confirmation manuelle.',sideLong:L,sideShort:S};}
-function card(x){let plan=x.signal==='NEUTRE'?'Pas de trade : confirmations insuffisantes.':`Entrée indicative ${fmt(x.m5.close)}<br>SL ${fmt(x.sl)} · TP1 ${fmt(x.tp1)} · TP2 ${fmt(x.tp2)}<br>Risque théorique ${pct(x.risk/x.m5.close*100)}`;
-return `<article class="coin" data-symbol="${x.symbol}" tabindex="0" role="button" aria-label="Afficher le détail de ${x.symbol}"><div class="coinhead"><div><div class="symbol">${x.symbol}</div><div class="muted">Score ${x.score}/100 · Volume ${fmt(x.volume/1e6,1)} M USDT</div></div><span class="signal ${x.signal}">${x.signal}</span></div><div class="price">${fmt(x.m5.close)} USDT</div><div class="metrics">
-<div class="metric"><small>1H tendance</small><b>${x.h1.trend>0?'Haussière':x.h1.trend<0?'Baissière':'Neutre'}</b></div><div class="metric"><small>15M variation</small><b>${pct(x.m15.move)}</b></div><div class="metric"><small>5M RVOL</small><b>${fmt(x.m5.rvol,2)}x</b></div>
-<div class="metric"><small>OI variation</small><b>${pct(x.oiChange)}</b></div><div class="metric"><small>Delta taker</small><b>${pct(x.m5.delta)}</b></div><div class="metric"><small>Spread</small><b>${pct(x.spread)}</b></div></div><div class="plan"><b>Plan indicatif</b><br>${plan}<br><span class="note">${x.why}</span><br><span class="note">Appuyer pour ouvrir l'analyse détaillée ↗</span></div></article>`}
+return {symbol,volume,h1,m15,m5,diagnostics,oiChange,oiOK,spread,score,signal,sl,tp1,tp2,risk,why:why.join(' · ')||'Confluence détectée : attendre une confirmation manuelle.',sideLong:L,sideShort:S};}
+
+function card(x){
+let plan=x.signal==='NEUTRE'
+?'Pas de trade : confirmations insuffisantes.'
+:`Entrée indicative ${fmt(x.m5.close)}<br>SL ${fmt(x.sl)} · TP1 ${fmt(x.tp1)} · TP2 ${fmt(x.tp2)}<br>Risque théorique ${pct(x.risk/x.m5.close*100)}`;
+
+let anomalyHTML=x.diagnostics.flags.length
+?`<div class="plan"><b>⚠️ Anomalies détectées</b><br>
+${x.diagnostics.flags.map(v=>`<span class="tag">${v.label}</span>`).join(' ')}
+</div>`
+:`<div class="plan"><b>Analyse V2.2</b><br><span class="note">Aucune anomalie détectée selon les seuils actuels.</span></div>`;
+
+return `<article class="coin" data-symbol="${x.symbol}" tabindex="0" role="button" aria-label="Afficher le détail de ${x.symbol}">
+<div class="coinhead"><div>
+<div class="symbol">${x.symbol}</div>
+<div class="muted">Score ${x.score}/100 · Volume ${fmt(x.volume/1e6,1)} M USDT</div>
+</div><span class="signal ${x.signal}">${x.signal}</span></div>
+
+<div class="price">${fmt(x.m5.close)} USDT</div>
+
+<div class="metrics">
+<div class="metric"><small>1H tendance</small><b>${x.h1.trend>0?'Haussière':x.h1.trend<0?'Baissière':'Neutre'}</b></div>
+<div class="metric"><small>15M variation</small><b>${pct(x.m15.move)}</b></div>
+<div class="metric"><small>5M RVOL</small><b>${fmt(x.m5.rvol,2)}x</b></div>
+<div class="metric"><small>OI variation</small><b>${pct(x.oiChange)}</b></div>
+<div class="metric"><small>Delta taker</small><b>${pct(x.m5.delta)}</b></div>
+<div class="metric"><small>Spread</small><b>${pct(x.spread)}</b></div>
+</div>
+
+<div class="plan"><b>Plan indicatif</b><br>${plan}<br>
+<span class="note">${x.why}</span><br>
+<span class="note">Appuyer pour ouvrir l'analyse détaillée ↗</span>
+</div>
+
+${anomalyHTML}
+</article>`;
+}
 function trendName(v){return v>0?'Haussière':v<0?'Baissière':'Neutre'}
 function detailMetric(label,value){return `<div class="detail"><small>${label}</small><b>${value}</b></div>`}
 function showDetail(symbol){let x=allResults.find(v=>v.symbol===symbol);if(!x)return;
@@ -86,6 +162,21 @@ ${detailMetric('Variation OI (fenêtre 5m)',pct(x.oiChange))}${detailMetric('Dis
 ${detailMetric('Spread bid/ask',pct(x.spread))}${detailMetric('Volatilité ATR 15M',pct(x.m15.atrPct))}
 </div>
 <div class="sectiontitle">Lecture du moteur</div><div class="explain"><b>Score directionnel LONG :</b> ${fmt(x.sideLong,0)} points<br><b>Score directionnel SHORT :</b> ${fmt(x.sideShort,0)} points<br><b>Écart entre les deux :</b> ${fmt(Math.abs(x.sideLong-x.sideShort),0)} points<br><span class="note">Le score additionne des pondérations techniques simples. Il ne représente ni une probabilité de gain ni une performance historique.</span></div>
+<div class="sectiontitle">🔎 Détection des anomalies V2.2</div>
+<div class="explain">
+<b>Variation du prix sur 5M :</b> ${pct(x.diagnostics.priceChange5m)}<br>
+<b>Corps de bougie / amplitude :</b>
+${Number.isFinite(x.diagnostics.bodyRatio)?fmt(x.diagnostics.bodyRatio*100,1)+'%':'—'}<br>
+<b>Absorption potentielle :</b>
+${x.diagnostics.absorption?'Détectée, à examiner':'Non détectée'}<br>
+<br>
+<b>Alertes :</b><br>
+${x.diagnostics.flags.length
+ ? x.diagnostics.flags.map(v=>`<span class="tag">${v.label}</span>`).join(' ')
+ : 'Aucune divergence détectée selon les seuils actuels.'}
+<br><br>
+<span class="note">Les divergences sont des observations, pas des preuves de manipulation. L'absorption est une heuristique, pas une confirmation de présence d'ordres cachés.</span>
+</div>
 <div class="sectiontitle">Conditions et points de vigilance</div><div class="explain">${x.why.split(' · ').map(v=>`<span class="tag">${v}</span>`).join(' ')}</div>
 <div class="sectiontitle">Plan indicatif</div><div class="explain">${x.signal==='NEUTRE'?'Aucun plan proposé : les conditions de validation ne sont pas réunies.':`Entrée indicative : ${fmt(x.m5.close)} USDT<br>Stop-loss : ${fmt(x.sl)}<br>TP1 : ${fmt(x.tp1)}<br>TP2 : ${fmt(x.tp2)}<br>Distance théorique au stop : ${pct(x.risk/x.m5.close*100)}`}<br><span class="note">Niveaux mécaniques calculés à partir d'un proxy ATR, pas des zones validées par structure. Vérifier le graphique avant toute décision.</span></div>
 <div class="sectiontitle">Limites de cette version</div><div class="explain">La détection dédiée des divergences et de l'absorption n'est pas encore implémentée. Le delta est une estimation taker issue des bougies Binance, pas un CVD multi-exchange. L'analyse 1M n'est pas incluse. Aucun ordre n'est envoyé.</div>`;
