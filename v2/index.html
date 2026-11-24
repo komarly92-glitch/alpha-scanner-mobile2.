@@ -81,9 +81,9 @@ function detectAnomalies(raw5m,m5,oiChange,oiOK){
 
   if(Math.abs(priceChange5m)>=0.1&&Math.abs(m5.delta)>=10){
     if(priceChange5m>0&&m5.delta<0)
-      flags.push({type:'PRICE_DELTA',label:'Prix en hausse / delta négatif',level:'warning'});
+      flags.push({type:'PRICE_DELTA',label:'Prix 5M en hausse / delta 5M négatif',level:'warning'});
     if(priceChange5m<0&&m5.delta>0)
-      flags.push({type:'PRICE_DELTA',label:'Prix en baisse / delta positif',level:'warning'});
+      flags.push({type:'PRICE_DELTA',label:'Prix 5M en baisse / delta 5M positif',level:'warning'});
   }
 
   const absorption=Number.isFinite(bodyRatio)&&
