@@ -1,5 +1,5 @@
 
-const CACHE='alpha-scanner-v2-1';
+const CACHE='alpha-scanner-v2-2-1';
 
 self.addEventListener('install',e=>e.waitUntil((async()=>{
   const c=await caches.open(CACHE);
