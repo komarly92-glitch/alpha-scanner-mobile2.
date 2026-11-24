@@ -1,4 +1,4 @@
-const CACHE='alpha-scanner-v1';
+const CACHE='alpha-scanner-v2';
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./','./index.html','./manifest.json']))));
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch',e=>{
